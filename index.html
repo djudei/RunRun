@@ -288,14 +288,7 @@ a{color:var(--violet-ink)}
       note: note
     };
   }
-  function rappels(s) {
-    return [];
-    var r = [], q = /intervalles|spécifique|seuil|rythme|rappel|test|5 km|course/i.test(s.type);
-    if (/^mar/i.test(s.date) && !s.course) r.push('Mardi midi : 45 min chrono. En retard ? Raccourcis l\'échauffement, jamais le bloc.');
-    if (/veille de test/i.test(s.detail)) r.push('Veille de test : pas d\'alcool, pas de renfo dur.');
-    if (q && !s.course) r.push('Glucides normaux aujourd\'hui · Bluetens après la séance.');
-    return r;
-  }
+  function rappels(s) { return []; }
   function fcOver(s, sa) {
     var m = String(s.fc).match(/<\s*(\d+)/), m2 = String(s.fc).match(/(\d+)\s*[-–]\s*(\d+)/);
     var fc = num(sa.fc); if (!fc) return false;

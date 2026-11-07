@@ -7,5 +7,5 @@ window.PROG_CONFIG = {
   // Google Cloud → Tableau de bord du projet → « Numéro du projet »
   appId: '604179652715',
   // Lien de copie du Sheet modèle
-  templateUrl: 'https://docs.google.com/spreadsheets/d/1MIAkdDamtZSqMhpPaXdE4oGiyokWEdq-yQ6qGCO675s/copy'
+  templateUrl: 'https://docs.google.com/spreadsheets/d/1s97axLX-jc6JaWpdW0y2NaC-rA8fJYXEtvbtS7X0mtU/copy'
 };
