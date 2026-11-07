@@ -131,7 +131,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--violet);outline-off
 .linkbox{display:flex;flex-direction:column;gap:8px;width:100%;max-width:360px}
 .linkbox input{width:100%;min-height:48px;border:2px solid var(--line-strong);border-radius:12px;padding:0 12px;font-size:15px;background:var(--card);color:var(--ink);outline:none}
 .linkbox input:focus{border-color:var(--violet)}
-.linkish{border:none;background:none;color:var(--mute);font-size:13px;padding:10px;text-decoration:underline}
+.linkish{border:none;background:none;color:var(--mute);font-size:13px;padding:10px;text-decoration:underline;text-align:center}
 .brand{font-size:14px;letter-spacing:.08em;text-transform:uppercase;background:linear-gradient(90deg,var(--sky),var(--violet),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
 a{color:var(--violet-ink)}
 .refresh{width:32px;height:32px;border:none;border-radius:10px;background:var(--card);color:var(--mute);display:inline-flex;align-items:center;justify-content:center;flex:none}
@@ -193,6 +193,13 @@ a{color:var(--violet-ink)}
   }
   function fPace(sec) { var s = Math.round(sec), m = Math.floor(s / 60); return m + "'" + pad(s - m * 60); }
   function fTime(sec) { var m = Math.floor(sec / 60), s = Math.round(sec - m * 60); return m + ':' + pad(s); }
+  // « 44,17 » (minutes décimales, ancienne appli) → 44'10 ; « 47:34 » → 47'34
+  function dispTemps(t) {
+    t = String(t || '').trim();
+    var d = t.match(/^(\d+),(\d+)$/);
+    if (d) { var sec = Math.round(parseFloat(d[1] + '.' + d[2]) * 60); return fChrono(sec).replace('"', ''); }
+    return t.replace(':', "'");
+  }
   function saisie(key) { return S.data.saisies[key] || null; }
   function isDone(sa) { return sa && (sa.statut === 'Faite' || sa.statut === 'Modifiée'); }
 
@@ -210,7 +217,7 @@ a{color:var(--violet-ink)}
     S.data.weeks.forEach(function (w) { w.sessions.forEach(function (s) { out.push(s); }); });
     return out;
   }
-  function raceSession() { return allSessions().filter(function (s) { return s.course; })[0]; }
+  function raceSession() { var c = allSessions().filter(function (s) { return s.course; }); return c[c.length - 1] || allSessions()[allSessions().length - 1]; }
   function test3Session() { return allSessions().filter(function (s) { return s.test3; })[0]; }
 
   function currentWeekIndex() {
@@ -365,17 +372,17 @@ a{color:var(--violet-ink)}
     var sa = saisie(s.key), t = todayIso();
     var isToday = s.iso === t, past = s.iso < t, done = !!s.fait;
     var skipped = !done && sa && sa.statut === 'Sautée';
-    var special = s.test3 || s.test5 || s.course;
-    var dParts = s.date.split(' ');
+    var special = s.test3 || s.test5 || s.test || s.course;
+    var dParts = s.icon || s.date.split(' ');
     var bg = special ? 'var(--pink)' : isToday ? 'var(--violet)' : 'var(--navy-soft)';
     var fg = special || isToday ? '#fff' : 'var(--navy-ink)';
     var h = '<div class="card' + (isToday ? ' today' : '') + (done ? ' done' : '') + '">';
     h += '<div class="row" style="gap:10px;align-items:flex-start"><div class="icon" style="background:' + bg + ';color:' + fg + '"><span>' + esc(dParts[0]) + '<br>' + esc(dParts[1] || '') + '</span></div>';
-    h += '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:16px;line-height:1.2">' + esc(s.type) + '</div><div class="small mute">' + esc(s.date) + ' · ' + esc(s.duree) +
+    h += '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:16px;line-height:1.2">' + esc(s.type) + '</div><div class="small mute">' + esc(s.when || s.date) + (s.duree ? ' · ' + esc(s.duree) : '') +
       (isToday ? ' · <strong style="color:var(--violet-ink)">aujourd\'hui</strong>' : '') + '</div>';
     var chips = '';
     if (s.course) chips += '<span class="chip" style="background:var(--pink-soft);color:var(--pink-ink)">Course</span>';
-    else if (s.test3 || s.test5) chips += '<span class="chip" style="background:var(--pink-soft);color:var(--pink-ink)">Test</span>';
+    else if (s.test3 || s.test5 || s.test) chips += '<span class="chip" style="background:var(--pink-soft);color:var(--pink-ink)">Test</span>';
     if (skipped) chips += '<span class="chip" style="background:var(--bg);color:var(--mute)">Sautée</span>';
     if (chips) h += '<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">' + chips + '</div>';
     h += '</div>';
@@ -397,7 +404,7 @@ a{color:var(--violet-ink)}
     h += '<div class="row sep" style="gap:6px;flex-wrap:wrap">';
     if (sa && sa.statut !== 'Sautée') {
       if (sa.chrono) h += '<span class="tag" style="background:var(--pink-soft);color:var(--pink-ink)">Chrono ' + esc(sa.chrono) + '</span>';
-      if (sa.temps) h += '<span class="tag">' + esc(sa.temps) + '</span>';
+      if (sa.temps) h += '<span class="tag">' + esc(dispTemps(sa.temps)) + '</span>';
       if (sa.km) h += '<span class="tag">' + esc(sa.km) + ' km</span>';
       if (sa.allure) h += '<span class="tag">' + esc(sa.allure) + '/km</span>';
       if (sa.fc) h += '<span class="tag"' + (fcOver(s, sa) ? ' style="background:var(--pink-soft);color:var(--pink-ink)"' : '') + '>FC ' + esc(sa.fc) + (fcOver(s, sa) ? ' · au-dessus' : '') + '</span>';
@@ -428,7 +435,7 @@ a{color:var(--violet-ink)}
       key: key, statut: sa.statut || 'Faite', temps: sa.temps, km: sa.km, allure: sa.allure, fc: sa.fc,
       chrono: sa.chrono, bilan: s.bilan || sa.bilan, commentaire: sa.commentaire
     } : {
-      key: key, statut: 'Faite', temps: plannedMin ? plannedMin + ':00' : '', km: '', allure: '', fc: '',
+      key: key, statut: 'Faite', temps: plannedMin ? plannedMin + ':00' : '', km: ((String(s.detail).match(/^(\d+(?:,\d+)?)\s*km/i) || [])[1] || ''), allure: '', fc: '',
       chrono: '', bilan: s.bilan, commentaire: ''
     };
     render();
@@ -455,7 +462,7 @@ a{color:var(--violet-ink)}
     var e = S.edit, s = findSession(e.key), special = s.test3 || s.test5 || s.course;
     var h = '<div class="sheet" role="dialog" aria-modal="true" aria-label="Saisie de la séance"><div class="inner">';
     h += '<div class="row" style="gap:10px"><button type="button" class="iconbtn" data-act="close" aria-label="Fermer sans enregistrer">' + ICON.left + '</button>';
-    h += '<div style="min-width:0"><div class="display" style="font-size:22px;line-height:1.1">' + esc(s.type) + '</div><div class="mute" style="font-size:13px">' + esc(s.date) + ' · prévu : ' + esc(s.duree) + (s.allure ? ' · ' + esc(s.allure) : '') + '</div></div></div>';
+    h += '<div style="min-width:0"><div class="display" style="font-size:22px;line-height:1.1">' + esc(s.type) + '</div><div class="mute" style="font-size:13px">' + esc(s.when || s.date) + ' · prévu : ' + esc(s.detail.length < 70 ? s.detail : (s.duree || s.detail.slice(0, 60) + '…')) + (s.allure ? ' · ' + esc(s.allure) : '') + '</div></div></div>';
     h += '<div class="seg" role="group" aria-label="Statut">' + ['Faite', 'Modifiée', 'Sautée'].map(function (o) {
       return '<button type="button" data-act="pick" data-f="statut" data-v="' + o + '" aria-pressed="' + (e.statut === o) + '" class="' + (e.statut === o ? 'on' : '') + '">' + o + '</button>';
     }).join('') + '</div>';
@@ -544,7 +551,7 @@ a{color:var(--violet-ink)}
         var mark = s.fait ? '<span class="mk on" aria-label="faite">' + ICON.check + '</span>' : skipped ? '<span class="mk skip" aria-label="sautée">–</span>' : '<span class="mk" aria-label="à faire"></span>';
         h += '<button type="button" class="calrow' + (s.iso === t ? ' today' : '') + '" data-act="goweek" data-i="' + i + '">' + mark +
           '<span class="small mute" style="width:76px;flex:none;white-space:nowrap">' + esc(s.date) + '</span>' +
-          '<span style="flex:1;min-width:0;font-size:14px;' + (s.test3 || s.test5 || s.course ? 'font-weight:700;color:var(--pink-ink)' : '') + '">' + esc(s.type) + '</span>' +
+          '<span style="flex:1;min-width:0;font-size:14px;' + (s.test3 || s.test5 || s.test || s.course ? 'font-weight:700;color:var(--pink-ink)' : '') + '">' + esc(s.type) + '</span>' +
           (s.bilan ? '<span class="dot" style="background:' + (BILAN_DOT[s.bilan] || 'var(--mute)') + '" title="' + esc(s.bilan) + '"></span>' : '') +
           (s.note ? '<span class="minote">' + esc(noteTxt(s.note)) + '</span>' : '<span class="small mute">' + esc(s.duree) + '</span>') + '</button>';
       });
@@ -698,7 +705,7 @@ a{color:var(--violet-ink)}
     switch (e && e.code) {
       case 'auth': return 'Ta session Google a expiré. Reconnecte-toi pour continuer.';
       case 'access': return 'Ce Sheet n\'est plus accessible. Choisis-le de nouveau.';
-      case 'format': return 'Ce Sheet ne suit pas le modèle : ' + e.message + '. Pars d\'une copie du modèle.';
+      case 'format': return 'RunRun ne reconnaît pas ce Sheet : ' + e.message + '. Le guide « Comment préparer mon Sheet ? » explique les deux formats acceptés.';
       case 'moved': return 'Le programme a changé dans le Sheet. Je l\'ai rechargé : refais ton action.';
       case 'network': return 'Pas de connexion internet. Réessaie quand le réseau revient.';
       default: return 'Google Sheets a renvoyé une erreur' + (e && e.message ? ' : ' + e.message : '') + '.';
@@ -728,11 +735,10 @@ a{color:var(--violet-ink)}
     return api('GET', API + GA.sheetId + '?fields=properties.title,sheets.properties.title').then(function (m) {
       var names = (m.sheets || []).map(function (s) { return s.properties.title; });
       GA.names = names;
-      var pick = function (re) { return names.filter(function (n) { return re.test(n); })[0] || null; };
       GA.sheetTitle = (m.properties && m.properties.title) || GA.sheetTitle;
       store(LS.title, GA.sheetTitle);
-      GA.tabs = { prog: pick(/d[ée]taill/i), vue: pick(/ensemble/i), ref: pick(/zones|r[ée]f[ée]rence/i), saisies: pick(/^saisies$/i) };
-      if (!GA.tabs.prog) throw { code: 'format', message: 'onglet « Programme détaillé » introuvable' };
+      var pick = function (re) { return names.filter(function (n) { return re.test(n); })[0] || null; };
+      GA.tabs = { vue: pick(/ensemble/i), saisies: pick(/^saisies$/i) };
       return GA.tabs;
     });
   }
@@ -747,10 +753,13 @@ a{color:var(--violet-ink)}
   function setRange(range, values) {
     return api('PUT', API + GA.sheetId + '/values/' + encodeURIComponent(range) + '?valueInputOption=RAW', { values: values });
   }
+  function slug(k) { return String(k).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+  function colLetter(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
 
-  // Écrit sur la ligne de la séance, après avoir vérifié que la ligne n'a pas bougé
+  // Écrit sur la ligne d'une séance du programme (format « une ligne par séance »),
+  // après avoir vérifié que la ligne n'a pas bougé
   function writeRow(s, first, last, values) {
-    return getRange(q(GA.tabs.prog) + '!B' + s.row).then(function (v) {
+    return getRange(q(GA.tabs.prog) + '!' + colLetter(GA.progCols.date) + s.row).then(function (v) {
       if (cell_(v[0], 0) !== s.date) { reload(true); throw { code: 'moved' }; }
       return setRange(q(GA.tabs.prog) + '!' + first + s.row + ':' + last + s.row, [values]);
     });
@@ -759,59 +768,156 @@ a{color:var(--violet-ink)}
   // ─── Lecture du Sheet ──────────────────────────────────────────────────
   function cell_(r, i) { return String((r && r[i]) || '').trim(); }
   function cap_(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
-  var MONTHS_ = { janv: 1, jan: 1, 'févr': 2, fev: 2, 'fév': 2, mars: 3, avr: 4, mai: 5, juin: 6, juil: 7,
+  var MONTHS_ = { janv: 1, jan: 1, 'févr': 2, fev: 2, 'fév': 2, mars: 3, avr: 4, avril: 4, mai: 5, juin: 6, juil: 7,
     'août': 8, aout: 8, sept: 9, sep: 9, oct: 10, nov: 11, 'déc': 12, dec: 12 };
+  function monthNum_(w) { w = String(w || '').toLowerCase(); return MONTHS_[w] || MONTHS_[w.slice(0, 4)] || MONTHS_[w.slice(0, 3)] || null; }
   function monthOf_(label) {
     var m = String(label).toLowerCase().match(/(\d{1,2})\s+([a-zéû]+)/);
     if (!m) return null;
-    var mo = MONTHS_[m[2]] || MONTHS_[m[2].slice(0, 3)];
+    var mo = monthNum_(m[2]);
     return mo ? { d: +m[1], m: mo } : null;
   }
+  // « 26 oct – 1 nov » ou « 2 – 8 nov » → premier jour de la semaine
+  function weekStart_(label) {
+    var s = String(label).toLowerCase(), first = s.match(/(\d{1,2})/), mo = null, mm = s.match(/\d{1,2}\s+([a-zéû]+)/g) || [];
+    for (var i = 0; i < mm.length && !mo; i++) mo = monthNum_(mm[i].replace(/^\d+\s+/, ''));
+    return first && mo ? { d: +first[1], m: mo } : null;
+  }
   function headerIndex_(v, test) { for (var i = 0; i < v.length; i++) { if (test(v[i] || [])) return i; } return -1; }
-  function isProgHeader_(r) { return cell_(r, 0).toUpperCase() === 'SEMAINE' && /DATE/i.test(cell_(r, 1)); }
+  function isSessionHeader_(r) {
+    var h = (r || []).map(function (x) { return String(x).trim().toUpperCase(); });
+    return /^(SEMAINE|S\.?|SEM\.?)$/.test(h[0] || '') && h.some(function (x) { return /^DATES?$/.test(x); }) && h.some(function (x) { return /^TYPE|D[ÉE]TAIL/.test(x); });
+  }
+  function isWeekHeader_(r) {
+    var h = (r || []).map(function (x) { return String(x).trim().toUpperCase(); });
+    return /^(SEMAINE|S\.?|SEM\.?|N°|#)$/.test(h[0] || '') && h.some(function (x) { return /^DATES?$/.test(x); }) && !isSessionHeader_(r);
+  }
+  // Année de départ : celle qui place le début du plan au plus près d'aujourd'hui
+  function startYear_(firstMonth) {
+    var n = new Date(), cm = n.getMonth() + 1, y = n.getFullYear();
+    if (firstMonth > cm + 6) return y - 1;
+    if (firstMonth < cm - 6) return y + 1;
+    return y;
+  }
+  function yearOf_(v, head) {
+    for (var t = 0; t < head; t++) { for (var k = 0; k < (v[t] || []).length; k++) { var ym = cell_(v[t], k).match(/20\d\d/); if (ym) return +ym[0]; } }
+    return new Date().getFullYear();
+  }
+  function cleanType_(type) {
+    return cap_(type.replace(/[\uD800-\uDFFF⭐️]/g, '').replace(/\s+/g, ' ').trim()
+      .replace(/\b(?!EF\b)[A-Z]{2,}\b/g, function (x) { return x.toLowerCase(); }));
+  }
+  function estMin_(text) {
+    var tot = 0;
+    String(text).split(/\s\+\s|·/).forEach(function (seg) {
+      var r = seg.match(/(\d+)\s*[x×]\s*(\d+)'/);
+      if (r) { tot += +r[1] * +r[2]; return; }
+      var m = seg.match(/(\d+)'/);
+      if (m && !/\d'\d/.test(seg.slice(seg.indexOf(m[0]) - 1, seg.indexOf(m[0]) + m[0].length + 1))) tot += +m[1];
+    });
+    return tot ? tot + ' min' : '';
+  }
 
-  function parseProgramme_(v) {
-    var head = headerIndex_(v, isProgHeader_);
-    if (head === -1) throw { code: 'format', message: 'en-tête « SEMAINE / DATE » introuvable dans « Programme détaillé »' };
-    // Année : la première année écrite en haut de l'onglet, sinon l'année en cours
-    var year = new Date().getFullYear();
-    for (var t = 0; t < head; t++) { var ym = cell_(v[t], 0).match(/20\d\d/); if (ym) { year = +ym[0]; break; } }
+  // Format A : une ligne par séance (SEMAINE · DATE · TYPE · DURÉE · DÉTAIL …)
+  function parseSessions_(v, head) {
+    var year = yearOf_(v, head);
     var h = v[head].map(function (x) { return String(x).trim().toUpperCase(); });
     var col = function (re, d) { for (var k = 0; k < h.length; k++) { if (re.test(h[k])) return k; } return d; };
-    var c = { date: col(/^DATE/, 1), type: col(/^TYPE/, 2), duree: col(/^DUR/, 3), detail: col(/D[ÉE]TAIL/, 4),
-      allure: col(/ALLURE/, 5), fc: col(/^FC/, 6), shoes: col(/CHAUSS/, 7), real: col(/R[ÉE]ALIS/, 8),
-      fait: col(/^FAIT/, 9), bilan: col(/^BILAN/, 10), note: col(/^NOTE/, 11) };
+    var c = { date: col(/^DATES?$/, 1), type: col(/^TYPE/, 2), duree: col(/^DUR/, 3), detail: col(/D[ÉE]TAIL/, 4),
+      allure: col(/ALLURE/, -1), fc: col(/^FC/, -1), shoes: col(/CHAUSS/, -1), real: col(/R[ÉE]ALIS/, -1),
+      fait: col(/^FAIT/, -1), bilan: col(/^BILAN/, -1), note: col(/^NOTE/, -1) };
+    GA.progCols = c;
     var weeks = [], byN = {}, prevMonth = null;
     for (var r = head + 1; r < v.length; r++) {
       var a = cell_(v[r], 0), d = cell_(v[r], c.date);
       if (/^l[ée]gende/i.test(a)) break;
-      var sm = a.match(/^S(\d+)/i);
+      var sm = a.match(/^S?(\d+)/i);
       if (!sm) continue;
       var n = Number(sm[1]);
       if (!byN[n]) { byN[n] = { n: n, focus: '', sessions: [] }; weeks.push(byN[n]); }
-      if (!d) { byN[n].focus = cap_(a.replace(/^S\d+\s*[—–-]\s*/i, '').toLowerCase()); continue; }
+      if (!d) { byN[n].focus = cap_(a.replace(/^S?\d+\s*[—–-]\s*/i, '').toLowerCase()); continue; }
       var md = monthOf_(d), iso = '';
       if (md) {
-        if (prevMonth != null && md.m < prevMonth - 6) year++;   // passage décembre → janvier
+        if (prevMonth == null) year = startYear_(md.m);
+        else if (md.m < prevMonth - 6) year++;
         prevMonth = md.m;
         iso = year + '-' + pad(md.m) + '-' + pad(md.d);
       }
       var type = cell_(v[r], c.type);
-      var clean = type.replace(/[\uD800-\uDFFF⭐️]/g, '').replace(/\s+/g, ' ').trim()
-        .replace(/\b(?!EF\b)[A-Z]{2,}\b/g, function (x) { return x.toLowerCase(); });
       byN[n].sessions.push({
-        key: d, row: r + 1, week: n, date: d, iso: iso, type: cap_(clean),
+        key: d, row: r + 1, week: n, date: d, iso: iso, type: cleanType_(type),
         duree: cell_(v[r], c.duree), detail: cell_(v[r], c.detail),
         allure: cell_(v[r], c.allure), fc: cell_(v[r], c.fc),
         chaussures: cell_(v[r], c.shoes), realise: cell_(v[r], c.real),
         fait: /^(true|vrai)$/i.test(cell_(v[r], c.fait)),
         bilan: cell_(v[r], c.bilan), note: cell_(v[r], c.note),
-        test3: /TEST\s*3/i.test(type), test5: /5\s*KM/i.test(type), course: /COURSE/i.test(type),
-        berlin: /berlin/i.test(type)
+        test3: /TEST\s*3/i.test(type), test5: /5\s*KM/i.test(type), test: /TEST/i.test(type), course: /COURSE/i.test(type) && !/TEST/i.test(type)
       });
     }
-    if (!weeks.length) throw { code: 'format', message: 'aucune séance trouvée dans « Programme détaillé »' };
     return weeks;
+  }
+
+  // Format B : une ligne par semaine, une colonne par type de séance
+  var WHEN_ = [[/soir/i, 'soir', 'Soir'], [/longue/i, 'longue', 'Week-end'], [/tapis|salle/i, 'tapis', 'Salle'], [/fractionn|piste|vma/i, 'qualite', 'Qualité']];
+  function parseWeeks_(v, head) {
+    var year = yearOf_(v, head);
+    var raw = v[head].map(function (x) { return String(x).trim(); });
+    var h = raw.map(function (x) { return x.toUpperCase(); });
+    var col = function (re) { for (var k = 0; k < h.length; k++) { if (re.test(h[k])) return k; } return -1; };
+    var c = { dates: col(/^DATES?$/), phase: col(/PHASE|FOCUS|BLOC|CYCLE/), km: col(/^KM|VOLUME/), fait: col(/^FAIT/),
+      ressenti: col(/RESSENTI|COMMENT/), objectif: col(/^OBJECTIF/) };
+    GA.progCols = c;
+    var used = [0, c.dates, c.phase, c.km, c.fait, c.ressenti, c.objectif];
+    var sessCols = [];
+    raw.forEach(function (name, k) {
+      if (!name || used.indexOf(k) > -1 || /^(NOTE|BILAN|STATUT)/i.test(name)) return;
+      var w = WHEN_.filter(function (x) { return x[0].test(name); })[0];
+      var id = w ? w[1] : slug(name).toLowerCase();
+      sessCols.push({ k: k, id: id, title: cap_(name.replace(/\s*\(.*?\)\s*/g, ' ').trim()), short: w ? w[2] : name.split(/\s+/)[0] });
+    });
+    var weeks = [], prevMonth = null;
+    for (var r = head + 1; r < v.length; r++) {
+      var m = cell_(v[r], 0).match(/^S?(\d+)$/i);
+      if (!m) { if (weeks.length && !cell_(v[r], 0)) break; continue; }
+      var n = +m[1], dates = c.dates > -1 ? cell_(v[r], c.dates) : '';
+      var ws = weekStart_(dates), iso = '';
+      if (ws) {
+        if (prevMonth == null) year = startYear_(ws.m);
+        else if (ws.m < prevMonth - 6) year++;
+        prevMonth = ws.m;
+        iso = year + '-' + pad(ws.m) + '-' + pad(ws.d);
+      }
+      var w = { n: n, row: r + 1, dates: dates, focus: c.phase > -1 ? cell_(v[r], c.phase).replace(/^\d+\s*[—–.-]\s*/, '') : '',
+        objectif: c.objectif > -1 ? cell_(v[r], c.objectif) : '', kmPlan: c.km > -1 ? cell_(v[r], c.km) : '', sessions: [] };
+      var active = sessCols.filter(function (sc) { var t = cell_(v[r], sc.k); return t && !/^(repos|libre|—|-)\b/i.test(t); });
+      active.forEach(function (sc, i) {
+        var t = cell_(v[r], sc.k);
+        var own = monthOf_(t), siso = iso;
+        if (own && iso) siso = (own.m < +iso.slice(5, 7) - 6 ? year + 1 : year) + '-' + pad(own.m) + '-' + pad(own.d);
+        var race = /\b(SEMI|MARATHON|COURSE|TRAIL|10 ?KM DE)\b/.test(t) && !/TEST/i.test(t);
+        w.sessions.push({
+          key: 'S' + n + '|' + sc.id, sid: sc.id, row: r + 1, week: n, date: sc.short, when: dates || sc.short, icon: ['S' + n, (i + 1) + '/' + active.length],
+          iso: siso, type: race ? cleanType_(t.split(/\s[—–-]\s/).pop()) : sc.title, duree: estMin_(t), detail: t.replace(/\s*[—–-]\s*SEMAINE ALL[ÉE]G[ÉE]E/i, ''),
+          allure: '', fc: '', chaussures: '', realise: '', fait: false, bilan: '', note: '',
+          test3: false, test5: false, test: /TEST/i.test(t), course: race
+        });
+      });
+      w.allegee = active.some(function (sc) { return /ALL[ÉE]G[ÉE]E/i.test(cell_(v[r], sc.k)); });
+      if (w.allegee) w.focus = (w.focus ? w.focus + ' · ' : '') + 'semaine allégée';
+      weeks.push(w);
+    }
+    return weeks;
+  }
+
+  function findProgramme_(byName) {
+    var best = null;
+    GA.names.forEach(function (n) {
+      var v = byName[n] || [], hs = headerIndex_(v, isSessionHeader_), hw = headerIndex_(v, isWeekHeader_);
+      if (hs === -1 && hw === -1) return;
+      var score = (hs > -1 ? 2 : 1) + (/d[ée]taill|plan|programme/i.test(n) ? 2 : 0);
+      if (!best || score > best.score) best = { name: n, mode: hs > -1 ? 'session' : 'week', head: hs > -1 ? hs : hw, score: score };
+    });
+    return best;
   }
 
   function parseVue_(v) {
@@ -840,6 +946,22 @@ a{color:var(--violet-ink)}
     return out;
   }
 
+  // Objectifs lus en haut de l'onglet programme (titre + ligne « Objectif … »)
+  function topObjectifs_(v, head) {
+    var out = [];
+    for (var t = 0; t < head; t++) {
+      var s = cell_(v[t], 0); if (!s) continue;
+      if (!out.length && !/^objectif/i.test(s)) { out.push({ label: 'Programme', value: cap_(s.split(/\s[—–-]\s/).slice(1).join(' · ').toLowerCase()) || s }); continue; }
+      s.split(/\s+·\s+/).forEach(function (part) {
+        var m = part.match(/^(objectif|base|rythme)\s*:?\s*(.*)$/i);
+        if (m) out.push({ label: cap_(m[1].toLowerCase()), value: m[2] });
+      });
+    }
+    var o = out.filter(function (x) { return /objectif/i.test(x.label); })[0];
+    if (o) { out.splice(out.indexOf(o), 1); out.unshift(o); }
+    return out;
+  }
+
   function tableAfter_(v, first) {
     var h = headerIndex_(v, function (r) { return cell_(r, 0).toUpperCase() === first; });
     if (h === -1) return [];
@@ -851,62 +973,117 @@ a{color:var(--violet-ink)}
     return rows;
   }
 
-  var SAISIES_HEADER = ['Date', 'Semaine', 'Séance', 'Statut', 'Temps', 'Km', 'Allure', 'FC moy', 'Chrono', 'Bilan', 'Commentaire', 'Mis à jour'];
+  // ─── Onglet « Saisies » : lu et écrit par nom de colonne ──────────────
+  var FIELDS_ = { date: /^date$/, semaine: /^semaine$/, seance: /^s[ée]ance$/, statut: /^statut$/, temps: /^(temps|dur[ée]e)$/, km: /^km$/,
+    allure: /^allure/, fc: /^fc/, chrono: /^chrono/, bilan: /^bilan$/, commentaire: /^comment/, note: /^note/, maj: /mis . jour/ };
+  var NEW_NAMES_ = { date: 'Date', semaine: 'Semaine', seance: 'Séance', statut: 'Statut', temps: 'Temps', km: 'Km', allure: 'Allure', fc: 'FC moy',
+    chrono: 'Chrono', bilan: 'Bilan', commentaire: 'Commentaire', maj: 'Mis à jour' };
+  function headerMap_(hdr) {
+    var map = {};
+    (hdr || []).forEach(function (x, i) {
+      var n = String(x).trim().toLowerCase();
+      Object.keys(FIELDS_).forEach(function (f) { if (map[f] == null && FIELDS_[f].test(n)) map[f] = i; });
+    });
+    return map;
+  }
+  function saisieKey_(r, map) {
+    if (map.date != null && cell_(r, map.date)) return cell_(r, map.date);
+    if (map.semaine != null && map.seance != null && cell_(r, map.semaine)) return 'S' + cell_(r, map.semaine).replace(/^S/i, '') + '|' + cell_(r, map.seance).toLowerCase();
+    return '';
+  }
   function parseSaisies_(v) {
-    var out = {}; GA.saisieRows = {};
+    var out = {}, map = headerMap_(v[0]);
+    GA.saisiesHeader = (v[0] || []).slice();
     for (var i = 1; i < v.length; i++) {
-      var r = v[i]; if (!cell_(r, 0)) continue;
-      GA.saisieRows[cell_(r, 0)] = i + 1;
-      out[cell_(r, 0)] = { date: cell_(r, 0), semaine: cell_(r, 1), type: cell_(r, 2), statut: cell_(r, 3), temps: cell_(r, 4),
-        km: cell_(r, 5), allure: cell_(r, 6), fc: cell_(r, 7), chrono: cell_(r, 8), bilan: cell_(r, 9), commentaire: cell_(r, 10) };
+      var r = v[i], k = saisieKey_(r, map); if (!k) continue;
+      var o = { key: k };
+      Object.keys(map).forEach(function (f) { o[f] = cell_(r, map[f]); });
+      out[k] = o;
     }
     return out;
   }
 
-  function loadAll() {
-    return findTabs().then(function (T) {
-      var infoTabs = GA.names.filter(function (n) { return n !== T.prog && n !== T.saisies && !/mode d.?emploi/i.test(n); });
-      var ranges = [q(T.prog) + '!A1:L200'];
-      if (T.saisies) ranges.push(q(T.saisies) + '!A1:L1000');
-      infoTabs.forEach(function (n) { ranges.push(q(n) + '!A1:Z150'); });
-      return batchGet(ranges).then(function (res) {
-        var i = 1, saiV = T.saisies ? res[i++] : [], byName = {};
-        infoTabs.forEach(function (n) { byName[n] = res[i++] || []; });
-        var vueV = T.vue ? byName[T.vue] : [], refV = [];
-        infoTabs.forEach(function (n) { if (tableAfter_(byName[n], 'CHRONO 3 KM').length) refV = byName[n]; });
-        var weeks = parseProgramme_(res[0]), vue = parseVue_(vueV);
-        vue.weeks.forEach(function (w) {
-          var p = weeks.filter(function (x) { return x.n === w.n; })[0];
-          if (p) { p.dates = w.dates; p.focus = w.focus || p.focus; p.cles = w.cles; p.objectif = w.objectif; p.chaussures = w.chaussures; }
+  function ensureSaisiesTab() {
+    if (GA.tabs.saisies) return Promise.resolve(GA.tabs.saisies);
+    var hdr = GA.mode === 'week'
+      ? ['Semaine', 'Séance', 'Statut', 'Km', 'Durée', 'Allure', 'FC moy', 'Bilan', 'Commentaire', 'Mis à jour']
+      : ['Date', 'Semaine', 'Séance', 'Statut', 'Temps', 'Km', 'Allure', 'FC moy', 'Chrono', 'Bilan', 'Commentaire', 'Mis à jour'];
+    return api('POST', API + GA.sheetId + ':batchUpdate', { requests: [{ addSheet: { properties: { title: 'Saisies' } } }] })
+      .then(function () { GA.tabs.saisies = 'Saisies'; return setRange("'Saisies'!A1:" + colLetter(hdr.length - 1) + '1', [hdr]); })
+      .then(function () { return 'Saisies'; });
+  }
+
+  // Met à jour (ou crée) la ligne de la séance dans « Saisies », sans toucher aux autres colonnes
+  function writeSaisieFields(s, fields) {
+    return ensureSaisiesTab().then(function (tab) {
+      return getRange(q(tab) + '!A1:Z2000').then(function (v) {
+        var hdr = (v[0] || []).map(function (x) { return String(x); }), map = headerMap_(hdr), added = false;
+        var ident = GA.mode === 'week' ? { semaine: String(s.week), seance: s.sid } : { date: s.key, semaine: 'S' + s.week, seance: s.type };
+        var all = Object.assign({}, ident, fields, { maj: new Date().toLocaleString('fr-FR') });
+        Object.keys(all).forEach(function (f) {
+          if (map[f] == null) { hdr.push(NEW_NAMES_[f] || f); map[f] = hdr.length - 1; added = true; }
         });
-        return {
-          weeks: weeks, objectifs: vue.objectifs, regles: vue.regles,
-          refs: { params: tableAfter_(refV, 'PARAMÈTRE'), zones: tableAfter_(refV, 'ZONE'), riegel: tableAfter_(refV, 'CHRONO 3 KM'), records: tableAfter_(refV, 'ÉPREUVE') },
-          saisies: parseSaisies_(saiV),
-          infos: infoTabs.map(function (n) { return { name: n, blocks: parseBlocks(byName[n]) }; })
-        };
+        var row = -1;
+        for (var i = 1; i < v.length; i++) { if (saisieKey_(v[i], map) === s.key) { row = i + 1; break; } }
+        if (row === -1) { row = v.length + 1; if (row < 2) row = 2; }
+        var line = ((row - 1 < v.length ? v[row - 1] : []) || []).slice();
+        while (line.length < hdr.length) line.push('');
+        Object.keys(all).forEach(function (f) { line[map[f]] = all[f] == null ? '' : String(all[f]); });
+        var last = colLetter(hdr.length - 1);
+        return (added ? setRange(q(tab) + '!A1:' + last + '1', [hdr]) : Promise.resolve())
+          .then(function () { return setRange(q(tab) + '!A' + row + ':' + last + row, [line]); });
       });
     });
   }
 
-  function ensureSaisiesTab() {
-    if (GA.tabs.saisies) return Promise.resolve(GA.tabs.saisies);
-    return api('POST', API + GA.sheetId + ':batchUpdate', { requests: [{ addSheet: { properties: { title: 'Saisies' } } }] })
-      .then(function () {
-        GA.tabs.saisies = 'Saisies';
-        return setRange("'Saisies'!A1:L1", [SAISIES_HEADER]);
-      }).then(function () { return 'Saisies'; });
+  // Format semaine : met à jour la colonne « Fait » de la semaine (ex. 2/3)
+  function updateWeekFait(s) {
+    if (GA.mode !== 'week' || GA.progCols.fait < 0) return Promise.resolve();
+    var w = S.data.weeks.filter(function (x) { return x.n === s.week; })[0]; if (!w) return Promise.resolve();
+    var done = w.sessions.filter(function (x) { return x.fait; }).length;
+    return getRange(q(GA.tabs.prog) + '!A' + w.row).then(function (v) {
+      if (cell_(v[0], 0).replace(/^S/i, '') !== String(w.n)) return;
+      return setRange(q(GA.tabs.prog) + '!' + colLetter(GA.progCols.fait) + w.row, [[done + '/' + w.sessions.length]]);
+    }).catch(function () {});
   }
 
-  function writeSaisie(p) {
-    return ensureSaisiesTab().then(function (tab) {
-      return getRange(q(tab) + '!A1:A1000').then(function (col) {
-        var row = -1;
-        for (var i = 1; i < col.length; i++) { if (cell_(col[i], 0) === p.date) { row = i + 1; break; } }
-        if (row === -1) row = Math.max(col.length + 1, 2);
-        var line = [p.date, p.semaine, p.type, p.statut, p.temps, p.km, p.allure, p.fc, p.chrono, p.bilan, p.commentaire,
-          new Date().toLocaleString('fr-FR')];
-        return setRange(q(tab) + '!A' + row + ':L' + row, [line]);
+  function loadAll() {
+    return findTabs().then(function (T) {
+      var others = GA.names.filter(function (n) { return n !== T.saisies; });
+      var ranges = others.map(function (n) { return q(n) + '!A1:Z300'; });
+      if (T.saisies) ranges.push(q(T.saisies) + '!A1:Z2000');
+      return batchGet(ranges).then(function (res) {
+        var byName = {};
+        others.forEach(function (n, i) { byName[n] = res[i] || []; });
+        var saiV = T.saisies ? res[res.length - 1] : [];
+        var P = findProgramme_(byName);
+        if (!P) throw { code: 'format', message: 'aucun onglet ne contient de programme (une colonne « Semaine » ou « S. » suivie d\'une colonne « Dates »)' };
+        GA.tabs.prog = P.name; GA.mode = P.mode;
+        var progV = byName[P.name];
+        var weeks = P.mode === 'session' ? parseSessions_(progV, P.head) : parseWeeks_(progV, P.head);
+        if (!weeks.length || !weeks.some(function (w) { return w.sessions.length; })) throw { code: 'format', message: 'aucune séance trouvée dans l\'onglet « ' + P.name + ' »' };
+        var saisies = parseSaisies_(saiV);
+        if (P.mode === 'week') {
+          weeks.forEach(function (w) { w.sessions.forEach(function (s) {
+            var sa = saisies[s.key]; if (!sa) return;
+            s.fait = /^(faite|modifi[ée]e|fait|oui|ok|x|true|vrai)$/i.test(sa.statut || '');
+            s.bilan = sa.bilan || ''; s.note = sa.note || '';
+          }); });
+        }
+        var vueV = T.vue ? byName[T.vue] : [], vue = parseVue_(vueV);
+        vue.weeks.forEach(function (w) {
+          var p = weeks.filter(function (x) { return x.n === w.n; })[0];
+          if (p) { p.dates = w.dates; p.focus = w.focus || p.focus; p.cles = w.cles; p.objectif = w.objectif; p.chaussures = w.chaussures; }
+        });
+        var infoTabs = others.filter(function (n) { return n !== P.name && !/mode d.?emploi/i.test(n); });
+        var refV = [];
+        infoTabs.forEach(function (n) { if (tableAfter_(byName[n], 'CHRONO 3 KM').length) refV = byName[n]; });
+        return {
+          weeks: weeks, objectifs: vue.objectifs.length ? vue.objectifs : topObjectifs_(progV, P.head), regles: vue.regles,
+          refs: { riegel: tableAfter_(refV, 'CHRONO 3 KM') },
+          saisies: saisies,
+          infos: infoTabs.map(function (n) { return { name: n, blocks: parseBlocks(byName[n]) }; })
+        };
       });
     });
   }
@@ -937,6 +1114,7 @@ a{color:var(--violet-ink)}
       '<button type="submit" class="btn btn-primary">Ouvrir ce Sheet</button>' +
       '<button type="button" class="btn btn-soft" data-act="pickSheet">Chercher dans mon Drive</button>' +
       (CFG.templateUrl ? '<a class="btn btn-soft" style="text-decoration:none;display:flex;align-items:center;justify-content:center" href="' + esc(CFG.templateUrl) + '" target="_blank" rel="noopener">Pas de Sheet ? Copier le modèle</a>' : '') +
+      '<a class="linkish" href="aide.html" target="_blank" rel="noopener">Comment préparer mon Sheet ?</a>' +
       '<button type="button" class="linkish" data-act="logout">Se déconnecter</button>';
     document.querySelector('.welcome').appendChild(box);
   }
@@ -1016,7 +1194,7 @@ a{color:var(--violet-ink)}
       loading = false;
       if (e && e.code === 'auth') { S.needAuth = true; if (S.data) { render(); return; } screen('Session expirée', errText(e), [{ act: 'login', label: 'Me reconnecter' }]); return; }
       if (S.data) { toast(errText(e)); return; }
-      if (e && (e.code === 'access' || e.code === 'format')) { screen('Impossible de lire ce Sheet', errText(e), [{ act: 'pickSheet', label: 'Choisir un autre Sheet' }, { act: 'logout', label: 'Se déconnecter', soft: true }]); return; }
+      if (e && (e.code === 'access' || e.code === 'format')) { screen('Impossible de lire ce Sheet', errText(e), [{ href: 'aide.html', label: 'Comment préparer mon Sheet ?' }, { act: 'chooseSheet', label: 'Choisir un autre Sheet' }, { act: 'logout', label: 'Se déconnecter', soft: true }]); return; }
       screen('Impossible de lire ton programme', errText(e), [{ act: 'reload', label: 'Réessayer' }]);
     });
   }
@@ -1026,19 +1204,33 @@ a{color:var(--violet-ink)}
     toast(errText(e));
   }
 
+  // Écrit des cellules du programme (format « une ligne par séance »)
+  function writeProgCells(s, cells) {
+    var cols = Object.keys(cells).map(Number).filter(function (c) { return c > -1; });
+    if (!cols.length) return Promise.resolve();
+    return getRange(q(GA.tabs.prog) + '!' + colLetter(GA.progCols.date) + s.row).then(function (v) {
+      if (cell_(v[0], 0) !== s.date) { reload(true); throw { code: 'moved' }; }
+      return Promise.all(cols.map(function (c) { return setRange(q(GA.tabs.prog) + '!' + colLetter(c) + s.row, [[cells[c]]]); }));
+    });
+  }
+
   function toggleFait(key) {
     var s = findSession(key), val = !s.fait;
     s.fait = val; render();
-    writeRow(s, 'J', 'J', [val])
-      .then(function () { toast(val ? 'Séance cochée dans ton Sheet.' : 'Séance décochée.'); })
+    var job = (GA.mode === 'session' && GA.progCols.fait > -1)
+      ? writeProgCells(s, (function () { var o = {}; o[GA.progCols.fait] = val; return o; })())
+      : writeSaisieFields(s, { statut: val ? 'Faite' : '' }).then(function () { return updateWeekFait(s); });
+    job.then(function () { toast(val ? 'Séance cochée dans ton Sheet.' : 'Séance décochée.'); })
       .catch(function (e) { s.fait = !val; render(); failWrite(e); });
   }
 
   function changeBilan(key, val) {
     var s = findSession(key), old = s.bilan;
     s.bilan = val; render();
-    writeRow(s, 'K', 'K', [val])
-      .then(function () { toast('Bilan enregistré.'); })
+    var job = (GA.mode === 'session' && GA.progCols.bilan > -1)
+      ? writeProgCells(s, (function () { var o = {}; o[GA.progCols.bilan] = val; return o; })())
+      : writeSaisieFields(s, { bilan: val });
+    job.then(function () { toast('Bilan enregistré.'); })
       .catch(function (e) { s.bilan = old; render(); failWrite(e); });
   }
 
@@ -1046,19 +1238,29 @@ a{color:var(--violet-ink)}
     var e = S.edit, s = findSession(e.key), skip = e.statut === 'Sautée';
     var chrono = !skip && e.chrono ? fChrono(toSec(e.chrono)) : '';
     var payload = {
-      date: s.key, semaine: 'S' + s.week, type: s.type, statut: e.statut,
-      temps: skip ? '' : e.temps, km: skip ? '' : String(e.km || '').replace('.', ','),
-      allure: skip ? '' : e.allure, fc: skip ? '' : e.fc, chrono: chrono,
-      bilan: skip ? '' : (e.bilan || ''), commentaire: e.commentaire || '', resume: resume(e)
+      statut: e.statut, temps: skip ? '' : e.temps, km: skip ? '' : String(e.km || '').replace('.', ','),
+      allure: skip ? '' : e.allure, fc: skip ? '' : e.fc,
+      bilan: skip ? '' : (e.bilan || ''), commentaire: e.commentaire || ''
     };
+    if (chrono || GA.mode === 'session') payload.chrono = chrono;
+    var res = resume(e);
     S.saving = true; render();
-    writeRow(s, 'I', 'K', [payload.resume, !skip, payload.bilan])
-      .then(function () { return writeSaisie(payload).catch(function () { toast('Séance enregistrée, mais le détail n\'a pas pu aller dans l\'onglet Saisies.'); }); })
-      .then(function () {
-        S.data.saisies[s.key] = payload;
-        s.fait = !skip; s.bilan = payload.bilan; s.realise = payload.resume;
+    var first;
+    if (GA.mode === 'session') {
+      var cells = {};
+      if (GA.progCols.real > -1) cells[GA.progCols.real] = res;
+      if (GA.progCols.fait > -1) cells[GA.progCols.fait] = !skip;
+      if (GA.progCols.bilan > -1) cells[GA.progCols.bilan] = payload.bilan;
+      first = writeProgCells(s, cells).then(function () { return writeSaisieFields(s, payload).catch(function () { toast('Séance enregistrée, mais le détail n\'a pas pu aller dans l\'onglet Saisies.'); }); });
+    } else {
+      first = writeSaisieFields(s, payload);
+    }
+    first.then(function () {
+        S.data.saisies[s.key] = Object.assign({ key: s.key }, payload);
+        s.fait = !skip; s.bilan = payload.bilan; if (GA.mode === 'session') s.realise = res;
         S.saving = false; S.edit = null; render();
         toast(skip ? 'Noté, séance sautée.' : 'Séance enregistrée dans ton Sheet.');
+        return updateWeekFait(s);
       })
       .catch(function (err) { S.saving = false; render(); failWrite(err); });
   }

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RunRun · Préparer son Sheet</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,800&family=DM+Sans:opsz,wght@9..40,400;9..40,700&display=swap">
+<style>
+:root{--ink:#152044;--mute:#56607A;--bg:#F3F6FC;--card:#FFFFFF;--line:#E6EBF5;--accent:#4B2FA6;--pink:#A3195B;--head:#DDE3F5}
+@media (prefers-color-scheme: dark){:root{--ink:#E6EAF7;--mute:#9AA3C2;--bg:#0E1430;--card:#18204A;--line:#283364;--accent:#CDBDFF;--pink:#FF9ECB;--head:#253064;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 'DM Sans',system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding-block:32px 56px;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right));display:flex;flex-direction:column;gap:16px}
+h1,h2{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-weight:800;line-height:1.15;margin:0}
+h1{font-size:30px}h2{font-size:20px}
+p{margin:0}.mute{color:var(--mute)}
+.card{background:var(--card);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.scroll{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
+table{border-collapse:collapse;font-size:13px;min-width:560px;width:100%}
+th,td{border-bottom:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+th{background:var(--head);font-weight:700;white-space:nowrap}
+code{background:var(--head);padding:1px 6px;border-radius:6px;font-size:14px}
+ul{margin:0;padding-left:20px}li{margin:4px 0}
+a{color:var(--accent);font-weight:700}
+.tag{display:inline-block;font-size:12px;font-weight:700;color:var(--pink);text-transform:uppercase;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<main>
+<a href="./">← Retour à RunRun</a>
+<h1>Préparer son Google Sheet</h1>
+<p>RunRun lit ton programme directement dans ton Google Sheet. Il reconnaît <strong>deux façons</strong> d'écrire un plan. Choisis celle qui te ressemble, ou pars du modèle.</p>
+
+<div class="card">
+<span class="tag">Le plus simple</span>
+<h2>Copier le modèle</h2>
+<p>Le modèle est un vrai programme 10 km de 7 semaines, prêt à l'emploi. Copie-le dans ton Drive, remplace les séances par les tiennes, puis choisis-le dans RunRun.</p>
+<p><a href="https://docs.google.com/spreadsheets/d/1MIAkdDamtZSqMhpPaXdE4oGiyokWEdq-yQ6qGCO675s/copy" target="_blank" rel="noopener">Copier le modèle</a></p>
+</div>
+
+<div class="card">
+<span class="tag">Format 1</span>
+<h2>Une ligne par séance</h2>
+<p>Idéal quand chaque séance a sa date. Une ligne d'en-tête avec au minimum <code>SEMAINE</code> en colonne A, puis <code>DATE</code> et <code>TYPE</code> (ou <code>DÉTAIL</code>).</p>
+<div class="scroll"><table>
+<tr><th>SEMAINE</th><th>DATE</th><th>TYPE</th><th>DURÉE</th><th>DÉTAIL SÉANCE</th><th>ALLURE CIBLE</th><th>FC CIBLE</th></tr>
+<tr><td>S1</td><td>Mar 3 nov</td><td>Fractionné</td><td>45 min</td><td>15 min EF + 3×2 km @ 4'15 + 5 min retour</td><td>4'15/km</td><td>&lt; 175</td></tr>
+<tr><td>S1</td><td>Sam 7 nov</td><td>Sortie longue</td><td>60 min</td><td>45 min EF puis 15 min à 4'45</td><td>5'30/km</td><td>&lt; 165</td></tr>
+</table></div>
+<ul>
+<li>La <strong>date</strong> s'écrit comme on la dit : <code>Mar 3 nov</code>, <code>Dim 29 nov</code>.</li>
+<li>Dans le détail, sépare les blocs par <code> + </code> : RunRun les affiche un par un, avec l'allure après <code>@</code>.</li>
+<li>Une ligne de titre de semaine (ex. <code>S1 — REPRISE</code>, sans date) devient le thème de la semaine.</li>
+<li>Colonnes facultatives, remplies par RunRun si elles existent : <code>RÉALISÉ</code>, <code>FAIT</code> (case à cocher), <code>BILAN</code>, <code>NOTE</code>.</li>
+<li>Un type contenant <code>TEST</code> ou <code>COURSE</code> est mis en avant.</li>
+</ul>
+</div>
+
+<div class="card">
+<span class="tag">Format 2</span>
+<h2>Une ligne par semaine</h2>
+<p>Idéal pour un plan « 2 ou 3 séances par semaine, au choix du jour ». Colonne A : le numéro de semaine (<code>S.</code>, <code>SEMAINE</code> ou <code>N°</code>), puis une colonne <code>DATES</code>, puis <strong>une colonne par type de séance</strong>.</p>
+<div class="scroll"><table>
+<tr><th>S.</th><th>Dates</th><th>Phase</th><th>Séance en soirée</th><th>Sortie longue</th><th>Tapis en salle</th><th>Km</th><th>Fait</th></tr>
+<tr><td>1</td><td>26 oct – 1 nov</td><td>Reconstruction</td><td>35' EF + 4 lignes droites</td><td>10 km en EF</td><td>15' à 10,0 km/h</td><td>19</td><td></td></tr>
+<tr><td>2</td><td>2 – 8 nov</td><td>Reconstruction</td><td>40' EF + 5 lignes droites</td><td>11 km EF</td><td>Repos</td><td>20</td><td></td></tr>
+</table></div>
+<ul>
+<li>Chaque colonne de séance devient une carte. Le nom de la colonne est le titre de la carte.</li>
+<li><code>Repos</code> ou <code>Libre</code> dans une case : pas de séance cette semaine-là.</li>
+<li>Colonnes reconnues et non transformées en séance : <code>Phase</code> (thème de la semaine), <code>Km</code>, <code>Fait</code> (RunRun y écrit 2/3, 3/3…), <code>Ressenti</code>, <code>Objectif</code>.</li>
+<li>Pour la course finale, écris sa date dans la case : <code>DIMANCHE 4 AVRIL — SEMI DE GRAZ</code>. Le compte à rebours se cale dessus.</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Les autres onglets</h2>
+<ul>
+<li><strong>Saisies</strong> : créé tout seul par RunRun à la première saisie. Il garde le détail de chaque séance (temps, distance, FC, bilan). N'en change pas les titres de colonnes.</li>
+<li><strong>Tous les autres onglets</strong> (allures, zones cardio, conseils, records, jour J…) s'affichent dans l'onglet <strong>Infos</strong> de RunRun. Un titre en majuscules sur sa propre ligne devient le titre d'un bloc, une ligne d'en-tête en majuscules devient un tableau.</li>
+<li>En haut de l'onglet programme, une ligne qui commence par <code>Objectif</code> (ex. <code>Objectif 1h55 (5'27/km)</code>) s'affiche en haut de l'écran.</li>
+</ul>
+</div>
+
+<p class="mute">Ton Sheet reste à toi : RunRun n'accède qu'au fichier que tu choisis. <a href="confidentialite.html">Confidentialité</a></p>
+</main>
+</body>
+</html>
