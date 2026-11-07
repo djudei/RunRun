@@ -57,6 +57,7 @@ main{flex:1;padding-block:16px calc(100px + env(safe-area-inset-bottom,0px));pad
 .card.done{background:var(--card)}
 .check{width:44px;height:44px;flex:none;border-radius:14px;border:2.5px solid var(--line-strong);background:var(--card);color:transparent;display:flex;align-items:center;justify-content:center;padding:0}
 .check.on{background:var(--navy);border-color:var(--navy);color:var(--on)}
+.check.miss{background:var(--bg);border-color:var(--mute);color:var(--mute)}
 .notebadge{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:52px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--violet),var(--pink));color:#fff;line-height:1}
 .notebadge .small{font-size:10px;opacity:.85;text-transform:uppercase;letter-spacing:.04em}
 .notebadge .display{font-size:17px}
@@ -148,6 +149,7 @@ a{color:var(--violet-ink)}
   var ICON = {
     refresh: '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
     chev: '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M6 9l6 6 6-6"/></svg>',
+    cross: '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     checkBig: '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>',
     check: '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>',
     left: '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
@@ -338,12 +340,15 @@ a{color:var(--violet-ink)}
     return h;
   }
 
-  var BILANS = ['Obj. atteint & facile', 'Obj. atteint & ok', 'Obj. atteint & difficile', 'Obj. non atteint'];
+  var BILANS = ['Obj. atteint & facile', 'Obj. atteint & ok', 'Obj. atteint & difficile', 'Obj. non atteint', 'Non réalisée'];
+  var MISSED = 'Non réalisée';
+  function isMissed(s) { if (s.fait) return false; if (s.bilan === MISSED) return true; var sa = S.data.saisies[s.key]; return !!(sa && sa.statut === 'Sautée'); }
   var BILAN_STYLE = {
     'Obj. atteint & facile': ['var(--sky-soft)', 'var(--sky-ink)'],
     'Obj. atteint & ok': ['var(--violet-soft)', 'var(--violet-ink)'],
     'Obj. atteint & difficile': ['var(--pink-soft)', 'var(--pink-ink)'],
-    'Obj. non atteint': ['#A3195B', '#fff']
+    'Obj. non atteint': ['#A3195B', '#fff'],
+    'Non réalisée': ['var(--line-strong)', 'var(--ink)']
   };
 
   function noteTxt(n) {
@@ -364,7 +369,7 @@ a{color:var(--violet-ink)}
   function sessionCard(s) {
     var sa = saisie(s.key), t = todayIso();
     var isToday = s.iso === t, past = s.iso < t, done = !!s.fait;
-    var skipped = !done && sa && sa.statut === 'Sautée';
+    var skipped = isMissed(s);
     var special = s.test3 || s.test5 || s.test || s.course;
     var dParts = s.icon || s.date.split(' ');
     var bg = special ? 'var(--pink)' : isToday ? 'var(--violet)' : 'var(--navy-soft)';
@@ -376,11 +381,11 @@ a{color:var(--violet-ink)}
     var chips = '';
     if (s.course) chips += '<span class="chip" style="background:var(--pink-soft);color:var(--pink-ink)">Course</span>';
     else if (s.test3 || s.test5 || s.test) chips += '<span class="chip" style="background:var(--pink-soft);color:var(--pink-ink)">Test</span>';
-    if (skipped) chips += '<span class="chip" style="background:var(--bg);color:var(--mute)">Sautée</span>';
+    if (skipped) chips += '<span class="chip" style="background:var(--bg);color:var(--mute)">Non réalisée</span>';
     if (chips) h += '<div class="row" style="gap:6px;margin-top:6px;flex-wrap:wrap">' + chips + '</div>';
     h += '</div>';
     if (s.note) h += '<div class="notebadge" aria-label="Note de Claude : ' + esc(noteTxt(s.note)) + '"><span class="small">note</span><span class="display">' + esc(noteTxt(s.note)) + '</span></div>';
-    h += '<button type="button" class="check' + (done ? ' on' : '') + '" data-act="toggle" data-k="' + esc(s.key) + '" role="checkbox" aria-checked="' + done + '" aria-label="Séance du ' + esc(s.date) + ' faite">' + ICON.checkBig + '</button>';
+    h += '<button type="button" class="check' + (done ? ' on' : skipped ? ' miss' : '') + '" data-act="toggle" data-k="' + esc(s.key) + '" role="checkbox" aria-checked="' + (done ? 'true' : skipped ? 'mixed' : 'false') + '" aria-label="Séance du ' + esc(s.date) + (skipped ? ' non réalisée' : ' faite') + '">' + (skipped ? ICON.cross : ICON.checkBig) + '</button>';
     h += '</div>';
 
     var st = steps(s.detail);
@@ -395,14 +400,14 @@ a{color:var(--violet-ink)}
     if (!done && !past) rappels(s).forEach(function (r) { h += '<div class="rappel">' + esc(r) + '</div>'; });
 
     h += '<div class="row sep" style="gap:6px;flex-wrap:wrap">';
-    if (sa && sa.statut !== 'Sautée') {
+    if (skipped) {
+      h += '<span class="small mute">' + (sa && sa.commentaire ? esc(sa.commentaire) : 'Séance non réalisée.') + '</span>';
+    } else if (sa && sa.statut !== 'Sautée') {
       if (sa.chrono) h += '<span class="tag" style="background:var(--pink-soft);color:var(--pink-ink)">Chrono ' + esc(sa.chrono) + '</span>';
       if (sa.temps) h += '<span class="tag">' + esc(dispTemps(sa.temps)) + '</span>';
       if (sa.km) h += '<span class="tag">' + esc(sa.km) + ' km</span>';
       if (sa.allure) h += '<span class="tag">' + esc(sa.allure) + '/km</span>';
       if (sa.fc) h += '<span class="tag"' + (fcOver(s, sa) ? ' style="background:var(--pink-soft);color:var(--pink-ink)"' : '') + '>FC ' + esc(sa.fc) + (fcOver(s, sa) ? ' · au-dessus' : '') + '</span>';
-    } else if (skipped) {
-      h += '<span class="small mute">' + (sa.commentaire ? esc(sa.commentaire) : 'Séance sautée.') + '</span>';
     } else if (s.realise) {
       h += '<span class="small" style="color:var(--sky-ink);line-height:1.4">' + esc(s.realise) + '</span>';
     } else {
@@ -517,7 +522,7 @@ a{color:var(--violet-ink)}
   }
 
   // ─── Calendrier ───────────────────────────────────────────────────────
-  var BILAN_DOT = { 'Obj. atteint & facile': 'var(--sky)', 'Obj. atteint & ok': 'var(--violet)', 'Obj. atteint & difficile': 'var(--pink)', 'Obj. non atteint': '#A3195B' };
+  var BILAN_DOT = { 'Obj. atteint & facile': 'var(--sky)', 'Obj. atteint & ok': 'var(--violet)', 'Obj. atteint & difficile': 'var(--pink)', 'Obj. non atteint': '#A3195B', 'Non réalisée': 'var(--mute)' };
 
   function viewCalendrier() {
     var D = S.data, cur = currentWeekIndex(), all = allSessions(), t = todayIso();
@@ -532,13 +537,13 @@ a{color:var(--violet-ink)}
       });
       h += '</div>';
     }
-    var pct = Math.round(doneAll / Math.max(1, all.length) * 100), kmDone = 0;
-    all.forEach(function (s) { var sa = saisie(s.key); if (s.fait && sa && num(sa.km) > 0) kmDone += num(sa.km); });
+    var missedAll = all.filter(isMissed).length;
+    var pct = Math.round((doneAll + missedAll) / Math.max(1, all.length) * 100);
     var wkNow = Math.min(Math.max(cur, 0) + 1, D.weeks.length);
     var stat = function (v, l) { return '<div style="flex:1;min-width:0"><div class="display" style="font-size:22px">' + v + '</div><div class="small mute">' + l + '</div></div>'; };
     h += '<div class="card" style="gap:12px"><div class="row" style="justify-content:space-between;align-items:baseline"><strong>Ta progression</strong><span class="display" style="font-size:28px;color:var(--violet)">' + pct + ' %</span></div>' +
-      '<div style="height:10px;background:var(--bg);border-radius:999px;overflow:hidden" role="img" aria-label="' + pct + ' % du programme fait"><div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--sky),var(--violet),var(--pink));border-radius:999px"></div></div>' +
-      '<div class="row" style="gap:12px">' + stat(doneAll + '/' + all.length, 'séances faites') + stat(String(Math.round(kmDone * 10) / 10).replace('.', ','), 'km notés') + stat(wkNow + '/' + D.weeks.length, 'semaines') + '</div></div>';
+      '<div style="height:10px;background:var(--bg);border-radius:999px;overflow:hidden" role="img" aria-label="' + pct + ' % du programme passé"><div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--sky),var(--violet),var(--pink));border-radius:999px"></div></div>' +
+      '<div class="row" style="gap:12px">' + stat(doneAll + '/' + all.length, 'séances faites') + stat(String(missedAll), missedAll > 1 ? 'non réalisées' : 'non réalisée') + stat(wkNow + '/' + D.weeks.length, 'semaines') + '</div></div>';
     D.weeks.forEach(function (w, i) {
       var done = w.sessions.filter(function (s) { return s.fait; }).length;
       h += '<section class="card calweek' + (i === cur ? ' cur' : '') + '" aria-label="Semaine ' + w.n + '">';
@@ -546,8 +551,8 @@ a{color:var(--violet-ink)}
         '<span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:700">' + esc(w.focus || '') + '</span><span class="small mute">' + esc(w.dates || '') + (i === cur ? ' · en cours' : '') + '</span></span>' +
         '<span class="small" style="font-weight:700;color:' + (done === w.sessions.length ? 'var(--sky-ink)' : 'var(--mute)') + '">' + done + '/' + w.sessions.length + '</span></button>';
       w.sessions.forEach(function (s) {
-        var sa = saisie(s.key), skipped = !s.fait && sa && sa.statut === 'Sautée';
-        var mark = s.fait ? '<span class="mk on" aria-label="faite">' + ICON.check + '</span>' : skipped ? '<span class="mk skip" aria-label="sautée">–</span>' : '<span class="mk" aria-label="à faire"></span>';
+        var sa = saisie(s.key), skipped = isMissed(s);
+        var mark = s.fait ? '<span class="mk on" aria-label="faite">' + ICON.check + '</span>' : skipped ? '<span class="mk skip" aria-label="non réalisée">✕</span>' : '<span class="mk" aria-label="à faire"></span>';
         h += '<button type="button" class="calrow' + (s.iso === t ? ' today' : '') + '" data-act="goweek" data-i="' + i + '">' + mark +
           '<span class="small mute" style="width:76px;flex:none;white-space:nowrap">' + esc(s.date) + '</span>' +
           '<span style="flex:1;min-width:0;font-size:14px;' + (s.test3 || s.test5 || s.test || s.course ? 'font-weight:700;color:var(--pink-ink)' : '') + '">' + esc(s.type) + '</span>' +
@@ -1224,23 +1229,34 @@ a{color:var(--violet-ink)}
   }
 
   function toggleFait(key) {
-    var s = findSession(key), val = !s.fait;
-    s.fait = val; render();
-    var job = (GA.mode === 'session' && GA.progCols.fait > -1)
-      ? writeProgCells(s, (function () { var o = {}; o[GA.progCols.fait] = val; return o; })())
-      : writeSaisieFields(s, { statut: val ? 'Faite' : '' }).then(function () { return updateWeekFait(s); });
-    job.then(function () { toast(val ? 'Séance cochée dans ton Sheet.' : 'Séance décochée.'); })
-      .catch(function (e) { s.fait = !val; render(); failWrite(e); });
+    var s = findSession(key), val = !s.fait, oldBilan = s.bilan, clearMiss = val && s.bilan === MISSED;
+    s.fait = val; if (clearMiss) s.bilan = ''; render();
+    var job;
+    if (GA.mode === 'session' && GA.progCols.fait > -1) {
+      var o = {}; o[GA.progCols.fait] = val; if (clearMiss && GA.progCols.bilan > -1) o[GA.progCols.bilan] = '';
+      job = writeProgCells(s, o);
+    } else {
+      var f = { statut: val ? 'Faite' : '' }; if (clearMiss) f.bilan = '';
+      job = writeSaisieFields(s, f).then(function () { var sa = S.data.saisies[s.key]; if (sa) { sa.statut = f.statut; if (clearMiss) sa.bilan = ''; } return updateWeekFait(s); });
+    }
+    job.then(function () { render(); toast(val ? 'Séance cochée dans ton Sheet.' : 'Séance décochée.'); })
+      .catch(function (e) { s.fait = !val; s.bilan = oldBilan; render(); failWrite(e); });
   }
 
   function changeBilan(key, val) {
-    var s = findSession(key), old = s.bilan;
-    s.bilan = val; render();
-    var job = (GA.mode === 'session' && GA.progCols.bilan > -1)
-      ? writeProgCells(s, (function () { var o = {}; o[GA.progCols.bilan] = val; return o; })())
-      : writeSaisieFields(s, { bilan: val });
-    job.then(function () { toast('Bilan enregistré.'); })
-      .catch(function (e) { s.bilan = old; render(); failWrite(e); });
+    var s = findSession(key), old = s.bilan, oldFait = s.fait, miss = val === MISSED;
+    s.bilan = val; if (miss) s.fait = false; render();
+    var job;
+    if (GA.mode === 'session' && GA.progCols.bilan > -1) {
+      var o = {}; o[GA.progCols.bilan] = val; if (miss && GA.progCols.fait > -1) o[GA.progCols.fait] = false;
+      job = writeProgCells(s, o);
+    } else {
+      var sa0 = S.data.saisies[s.key], f = { bilan: val };
+      if (miss) f.statut = 'Sautée'; else if (sa0 && sa0.statut === 'Sautée') f.statut = '';
+      job = writeSaisieFields(s, f).then(function () { var sa = S.data.saisies[s.key]; if (sa && 'statut' in f) sa.statut = f.statut; return miss && oldFait ? updateWeekFait(s) : null; });
+    }
+    job.then(function () { render(); toast(miss ? 'Noté : séance non réalisée.' : 'Bilan enregistré.'); })
+      .catch(function (e) { s.bilan = old; s.fait = oldFait; render(); failWrite(e); });
   }
 
   function save() {
