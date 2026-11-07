@@ -303,7 +303,7 @@ a{color:var(--violet-ink)}
     if (S.view === 'semaine') html += viewSemaine();
     if (S.view === 'calendrier') html += viewCalendrier();
     if (S.view === 'infos') html += viewInfos();
-    if (S.needAuth) html = html.replace('<main>', '<main><div class="alert" role="alert"><div style="flex:1"><strong>Session Google expirée.</strong><br>Reconnecte-toi pour enregistrer tes séances.</div><button type="button" class="btn btn-primary" data-act="login">Me reconnecter</button></div>');
+    if (S.needAuth) html = html.replace('<main>', '<main><div class="alert" role="alert"><div style="flex:1"><strong>Un clic pour reprendre.</strong><br>Reconnecte-toi pour cocher et enregistrer tes séances.</div><button type="button" class="btn btn-primary" data-act="login">Continuer</button></div>');
     html += '</main>' + tabs();
     if (S.edit) html += viewSaisie();
     document.getElementById('app').innerHTML = html;
@@ -532,7 +532,13 @@ a{color:var(--violet-ink)}
       });
       h += '</div>';
     }
-    h += '<div style="height:10px;background:var(--card);border-radius:999px;overflow:hidden" role="img" aria-label="' + doneAll + ' séances faites sur ' + all.length + '"><div style="height:100%;width:' + Math.round(doneAll / Math.max(1, all.length) * 100) + '%;background:linear-gradient(90deg,var(--sky),var(--violet),var(--pink));border-radius:999px"></div></div>';
+    var pct = Math.round(doneAll / Math.max(1, all.length) * 100), kmDone = 0;
+    all.forEach(function (s) { var sa = saisie(s.key); if (s.fait && sa && num(sa.km) > 0) kmDone += num(sa.km); });
+    var wkNow = Math.min(Math.max(cur, 0) + 1, D.weeks.length);
+    var stat = function (v, l) { return '<div style="flex:1;min-width:0"><div class="display" style="font-size:22px">' + v + '</div><div class="small mute">' + l + '</div></div>'; };
+    h += '<div class="card" style="gap:12px"><div class="row" style="justify-content:space-between;align-items:baseline"><strong>Ta progression</strong><span class="display" style="font-size:28px;color:var(--violet)">' + pct + ' %</span></div>' +
+      '<div style="height:10px;background:var(--bg);border-radius:999px;overflow:hidden" role="img" aria-label="' + pct + ' % du programme fait"><div style="height:100%;width:' + pct + '%;background:linear-gradient(90deg,var(--sky),var(--violet),var(--pink));border-radius:999px"></div></div>' +
+      '<div class="row" style="gap:12px">' + stat(doneAll + '/' + all.length, 'séances faites') + stat(String(Math.round(kmDone * 10) / 10).replace('.', ','), 'km notés') + stat(wkNow + '/' + D.weeks.length, 'semaines') + '</div></div>';
     D.weeks.forEach(function (w, i) {
       var done = w.sessions.filter(function (s) { return s.fait; }).length;
       h += '<section class="card calweek' + (i === cur ? ' cur' : '') + '" aria-label="Semaine ' + w.n + '">';
@@ -647,6 +653,7 @@ a{color:var(--violet-ink)}
     var b = ev.target.closest('[data-act]');
     if (!b || b.disabled) return;
     var act = b.getAttribute('data-act');
+    if (S.needAuth && /^(toggle|edit|save)$/.test(act)) { requestToken(); return; }
     if (act === 'tab') { S.view = b.getAttribute('data-v'); render(); window.scrollTo(0, 0); }
     if (act === 'prev' && S.w > 0) { S.w--; render(); }
     if (act === 'next' && S.w < S.data.weeks.length - 1) { S.w++; render(); }
@@ -670,6 +677,7 @@ a{color:var(--violet-ink)}
     if (act === 'logout') logout();
   });
   document.addEventListener('submit', function (ev) {
+    if (ev.target.matches('[data-form=search]')) { ev.preventDefault(); openPicker(null, document.getElementById('f-name').value.trim()); return; }
     if (!ev.target.matches('[data-form=link]')) return;
     ev.preventDefault();
     var id = sheetIdFromLink(document.getElementById('f-link').value);
@@ -677,7 +685,7 @@ a{color:var(--violet-ink)}
     openPicker(id);
   });
   document.addEventListener('change', function (ev) {
-    if (ev.target.matches('[data-change=bilan]')) changeBilan(ev.target.getAttribute('data-k'), ev.target.value);
+    if (ev.target.matches('[data-change=bilan]')) { if (S.needAuth) { requestToken(); return; } changeBilan(ev.target.getAttribute('data-k'), ev.target.value); }
   });
   document.addEventListener('input', function (ev) { if (ev.target.matches('[data-f]')) onInput(ev.target); });
 
@@ -1094,18 +1102,23 @@ a{color:var(--violet-ink)}
   function welcome() {
     screen('Ton programme de course, lisible et à jour',
       'Connecte-toi avec Google, choisis le Sheet de ton programme : coche tes séances, note ton bilan, tout s\'écrit dans ton Sheet.',
-      [{ act: 'login', label: 'Se connecter avec Google' }].concat(CFG.templateUrl ? [{ href: CFG.templateUrl, label: 'Copier le modèle de Sheet' }] : []));
+      [{ act: 'login', label: 'Se connecter avec Google' }]);
   }
 
   function chooseSheet() {
     screen('Choisis ton Sheet',
-      'Colle le lien de ton Google Sheet, ou cherche-le dans ton Drive. Google te demandera de confirmer : RunRun n\'aura accès qu\'à ce fichier.', []);
-    var box = document.createElement('form');
-    box.className = 'linkbox'; box.setAttribute('data-form', 'link');
-    box.innerHTML = '<label for="f-link" class="small mute" style="text-align:left">Lien du Google Sheet</label>' +
+      'Tape le nom de ton Google Sheet, ou colle son lien. Google te demandera de confirmer : RunRun n\'aura accès qu\'à ce fichier.', []);
+    var box = document.createElement('div');
+    box.className = 'linkbox';
+    box.innerHTML = '<form data-form="search" class="linkbox" style="max-width:none">' +
+      '<label for="f-name" class="small mute" style="text-align:left">Nom de ton Sheet</label>' +
+      '<input id="f-name" type="search" autocomplete="off" enterkeyhint="search" placeholder="ex. Mon programme semi">' +
+      '<button type="submit" class="btn btn-primary">Chercher dans mon Drive</button></form>' +
+      '<div class="small mute" style="text-align:center;margin:6px 0">ou</div>' +
+      '<form data-form="link" class="linkbox" style="max-width:none">' +
+      '<label for="f-link" class="small mute" style="text-align:left">Lien du Google Sheet</label>' +
       '<input id="f-link" type="url" inputmode="url" autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/…">' +
-      '<button type="submit" class="btn btn-primary">Ouvrir ce Sheet</button>' +
-      '<button type="button" class="btn btn-soft" data-act="pickSheet">Chercher dans mon Drive</button>' +
+      '<button type="submit" class="btn btn-soft">Ouvrir ce lien</button></form>' +
       (CFG.templateUrl ? '<a class="btn btn-soft" style="text-decoration:none;display:flex;align-items:center;justify-content:center" href="' + esc(CFG.templateUrl) + '" target="_blank" rel="noopener">Pas de Sheet ? Copier le modèle</a>' : '') +
       '<a class="linkish" href="aide.html" target="_blank" rel="noopener">Comment préparer mon Sheet ?</a>' +
       '<button type="button" class="linkish" data-act="logout">Se déconnecter</button>';
@@ -1128,7 +1141,7 @@ a{color:var(--violet-ink)}
     if (!resp || resp.error) { welcome(); if (resp && resp.error !== 'popup_closed') toast('Connexion refusée par Google.'); return; }
     GA.token = resp.access_token;
     GA.exp = Date.now() + (Number(resp.expires_in || 3600) - 60) * 1000;
-    sstore('p10.token', JSON.stringify({ t: GA.token, exp: GA.exp }));
+    store('p10.token', JSON.stringify({ t: GA.token, exp: GA.exp }));
     S.needAuth = false;
     afterAuth();
   }
@@ -1143,11 +1156,13 @@ a{color:var(--violet-ink)}
     });
   }
 
-  function openPicker(fileId) {
+  function openPicker(fileId, query) {
     if (!window.gapi) { toast('Le sélecteur Google se charge encore, réessaie.'); return; }
     gapi.load('picker', function () {
       var view = new google.picker.DocsView(google.picker.ViewId.SPREADSHEETS).setMode(google.picker.DocsViewMode.LIST);
+      view.setMimeTypes('application/vnd.google-apps.spreadsheet');
       if (fileId && view.setFileIds) view.setFileIds(fileId);
+      if (!fileId && query) view.setQuery(query);
       new google.picker.PickerBuilder()
         .addView(view)
         .setOAuthToken(GA.token).setDeveloperKey(CFG.apiKey).setAppId(CFG.appId)
@@ -1165,7 +1180,7 @@ a{color:var(--violet-ink)}
 
   function logout() {
     var t = GA.token;
-    GA.token = null; GA.exp = 0; sstore('p10.token', null);
+    GA.token = null; GA.exp = 0; store('p10.token', null); store('p10.cache', null);
     store(LS.sheet, null); store(LS.title, null); store(LS.hint, null);
     S.data = null; S.name = '';
     if (t && window.google && google.accounts) { try { google.accounts.oauth2.revoke(t, function () {}); } catch (e) {} }
@@ -1180,6 +1195,7 @@ a{color:var(--violet-ink)}
     loadAll().then(function (d) {
       var keepWeek = S.data ? S.w : null;
       S.data = d; lastLoad = Date.now();
+      try { store('p10.cache', JSON.stringify({ sheet: GA.sheetId, d: d })); } catch (e) {}
       S.w = keepWeek == null ? currentWeekIndex() : Math.min(keepWeek, d.weeks.length - 1);
       loading = false; render();
       if (!quiet && keepWeek != null) toast('Programme à jour.');
@@ -1274,8 +1290,15 @@ a{color:var(--violet-ink)}
       setTimeout(function () { waitGsi(tries + 1); }, 100);
     };
     waitGsi(0);
-    var saved = null; try { saved = JSON.parse(sload('p10.token') || 'null'); } catch (e) {}
+    var saved = null; try { saved = JSON.parse(load('p10.token') || 'null'); } catch (e) {}
     if (saved && saved.t && saved.exp > Date.now()) { GA.token = saved.t; GA.exp = saved.exp; afterAuth(); return; }
+    var cache = null; try { cache = JSON.parse(load('p10.cache') || 'null'); } catch (e) {}
+    if (cache && cache.d && cache.sheet === load(LS.sheet)) {
+      // Session Google expirée : on affiche tout de suite le dernier programme connu, en lecture
+      GA.sheetId = cache.sheet; GA.sheetTitle = load(LS.title) || '';
+      S.data = cache.d; S.w = currentWeekIndex(); S.needAuth = true; render();
+      return;
+    }
     if (load(LS.sheet) && load(LS.hint)) {
       screen('Content de te revoir', load(LS.title) ? 'Ton programme : ' + load(LS.title) : 'Ton programme t\'attend.', [{ act: 'login', label: 'Ouvrir mon programme' }, { act: 'logout', label: 'Changer de compte', soft: true }]);
       return;
