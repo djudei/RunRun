@@ -210,7 +210,7 @@ a{color:var(--violet-ink)}
     var t = document.createElement('div');
     t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
     document.body.appendChild(t);
-    setTimeout(function () { t.remove(); }, 2600);
+    setTimeout(function () { t.remove(); }, Math.max(2600, msg.length * 60));
   }
 
   // ─── Données dérivées ─────────────────────────────────────────────────
@@ -711,6 +711,7 @@ a{color:var(--violet-ink)}
     switch (e && e.code) {
       case 'auth': return 'Ta session Google a expiré. Reconnecte-toi pour continuer.';
       case 'access': return 'Ce Sheet n\'est plus accessible. Choisis-le de nouveau.';
+      case 'readonly': return 'Tu peux lire ce Sheet mais pas le modifier. Demande à son propriétaire de te le partager en « Éditeur », ou fais-en une copie (Fichier → Créer une copie) et choisis la copie.';
       case 'format': return 'RunRun ne reconnaît pas ce Sheet : ' + e.message + '. Le guide « Comment préparer mon Sheet ? » explique les deux formats acceptés.';
       case 'moved': return 'Le programme a changé dans le Sheet. Je l\'ai rechargé : refais ton action.';
       case 'network': return 'Pas de connexion internet. Réessaie quand le réseau revient.';
@@ -728,7 +729,8 @@ a{color:var(--violet-ink)}
       if (r.ok) return r.json();
       return r.json().catch(function () { return {}; }).then(function (j) {
         var msg = j && j.error && j.error.message;
-        if (r.status === 401) { GA.token = null; sstore('p10.token', null); throw { code: 'auth' }; }
+        if (r.status === 401) { GA.token = null; store('p10.token', null); throw { code: 'auth' }; }
+        if (r.status === 403 && method !== 'GET') throw { code: 'readonly', message: msg };
         if (r.status === 403 || r.status === 404) throw { code: 'access', message: msg };
         throw { code: 'http', message: msg || ('HTTP ' + r.status) };
       });
